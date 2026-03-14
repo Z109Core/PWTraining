@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="forestgreen">
+    <title>Simple Address Book</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            padding: 20px;
+            -webkit-text-size-adjust: 100%;
+            min-height: 100vh;
+            padding-left: max(20px, env(safe-area-inset-left));
+            padding-right: max(20px, env(safe-area-inset-right));
+            padding-bottom: max(20px, env(safe-area-inset-bottom));
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        header {
+            background: forestgreen;
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 12px; padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+            .content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 20px;
+            }
+            header { padding: 20px 16px; }
+            header h1 { font-size: 1.75em; }
+            header p { font-size: 1em; }
+        }
+
+        /* Touch-friendly and small screens */
+        @media (max-width: 600px) {
+            body { padding: 10px; padding-left: max(10px, env(safe-area-inset-left)); padding-right: max(10px, env(safe-area-inset-right)); padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+            .container { border-radius: 6px; }
+            .content { padding: 16px; gap: 16px; }
+            .form-section h2, .list-section h2 { font-size: 1.25em; margin-bottom: 16px; }
+            .form-group { margin-bottom: 12px; }
+            /* 16px input font prevents iOS zoom on focus */
+            input {
+                padding: 12px 14px;
+                font-size: 16px;
+                min-height: 48px;
+            }
+            .form-buttons { flex-direction: column; margin-top: 16px; gap: 12px; }
+            button {
+                padding: 14px 20px;
+                min-height: 48px;
+                font-size: 1em;
+            }
+            .btn-primary, .btn-cancel { flex: none; }
+            .search-box { flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+            .search-box input { min-height: 48px; font-size: 16px; }
+            .btn-clear { min-height: 48px; padding: 12px 16px; }
+            .table-wrapper {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                margin: 0 -16px;
+                padding: 0 16px;
+            }
+            .table-wrapper table { font-size: 0.9em; margin-bottom: 16px; }
+            th, td { padding: 10px 8px; white-space: nowrap; }
+            th:last-child, td:last-child { white-space: normal; position: sticky; right: 0; box-shadow: -4px 0 8px rgba(0,0,0,0.06); }
+            thead th:last-child { background: #f8f9fa; }
+            tbody td:last-child { background: #fff; }
+            tbody tr:nth-child(even) td:last-child { background: #f9f9f9; }
+            tbody tr:hover td:last-child { background: #f8f9fa; }
+            .actions { gap: 8px; flex-wrap: wrap; }
+            .btn-edit, .btn-delete {
+                padding: 10px 14px;
+                min-height: 44px;
+                min-width: 44px;
+                font-size: 0.9em;
+            }
+            .empty-state, .no-results { padding: 24px 16px; }
+            .message { padding: 14px; }
+        }
+
+        /* Form Section */
+        .form-section h2 {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: forestgreen;
+            min-height: 32px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            font-size: 0.95em;
+        }
+
+        label .required {
+            color: #e74c3c;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+            font-family: inherit;
+        }
+
+        input:focus {
+            outline: 2px solid forestgreen;
+            outline-offset: 2px;
+            border-color: forestgreen;
+        }
+
+        input.error {
+            border-color: #e74c3c;
+            background-color: #fadbd8;
+        }
+
+        .error-message {
+            color: #e74c3c;
+            font-size: 0.85em;
+            margin-top: 3px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .form-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background-color: forestgreen;
+            color: white;
+            flex: 1;
+        }
+
+        .btn-primary:hover {
+            background-color: forestgreen;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-cancel {
+            background-color: #95a5a6;
+            color: white;
+            display: none;
+            flex: 1;
+        }
+
+        .btn-cancel:hover {
+            background-color: #7f8c8d;
+        }
+
+        .btn-cancel.show {
+            display: block;
+        }
+
+        /* Message Section */
+        .message {
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: none;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        /* List Section */
+        .list-section h2 {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            color: forestgreen;
+        }
+
+        .search-box {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .search-box input {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .btn-clear {
+            background-color: #95a5a6;
+            color: white;
+            padding: 10px 15px;
+            white-space: nowrap;
+        }
+
+        .btn-clear:hover {
+            background-color: #7f8c8d;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        thead {
+            background-color: #f8f9fa;
+        }
+
+        th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid forestgreen;
+            color: #333;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-edit {
+            background-color: #3498db;
+            color: white;
+            padding: 6px 12px;
+            font-size: 0.9em;
+        }
+
+        .btn-edit:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-delete {
+            background-color: #e74c3c;
+            color: white;
+            padding: 6px 12px;
+            font-size: 0.9em;
+        }
+
+        .btn-delete:hover {
+            background-color: #c0392b;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #7f8c8d;
+        }
+
+        .empty-state p {
+            font-size: 1.1em;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 30px 20px;
+            color: #7f8c8d;
+        }
+
+        .form-group input:disabled {
+            background-color: #ecf0f1;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Address Book</h1>
+            <p>Manage your contacts with ease</p>
+        </header>
+
+        <div class="content">
+            <!-- Form Section -->
+            <div class="form-section">
+                <h2 id="formHeading">Add New Address</h2>
+                
+                <div id="message" class="message"></div>
+
+                <form id="contactForm">
+                    <div class="form-group">
+                        <label for="firstName">
+                            First Name <span class="required">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="firstName" 
+                            placeholder="Enter first name"
+                            autocomplete="off"
+                        >
+                        <div class="error-message" data-field="firstName"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="lastName">
+                            Last Name <span class="required">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="lastName" 
+                            placeholder="Enter last name"
+                            autocomplete="off"
+                        >
+                        <div class="error-message" data-field="lastName"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">
+                            Email <span class="required">*</span>
+                        </label>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            placeholder="Enter email address"
+                            autocomplete="off"
+                        >
+                        <div class="error-message" data-field="email"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="phone">Phone Number</label>
+                        <input 
+                            type="tel" 
+                            id="phone" 
+                            placeholder="Enter phone number"
+                            autocomplete="off"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="street">Street Address</label>
+                        <input 
+                            type="text" 
+                            id="street" 
+                            placeholder="Enter street address"
+                            autocomplete="off"
+                        >
+                    </div>
+<!-- 
+                    <div class="form-group">
+                        <label for="city">City</label>
+                        <input 
+                            type="text" 
+                            id="city" 
+                            placeholder="Enter city"
+                            autocomplete="off"
+                        >
+                    </div> -->
+
+                    <div class="form-group">
+                        <label for="state">State/Province</label>
+                        <input 
+                            type="text" 
+                            id="state" 
+                            placeholder="Enter state or province"
+                            autocomplete="off"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="postalCode">Postal Code</label>
+                        <input 
+                            type="text" 
+                            id="postalCode" 
+                            placeholder="Enter postal code"
+                            autocomplete="off"
+                        >
+                    </div>
+
+                    <div class="form-buttons">
+                        <button type="submit" class="btn-primary" id="submitBtn">Add Address</button>
+                        <button type="button" class="btn-cancel" id="cancelBtn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- List Section -->
+            <div class="list-section">
+                <h2>Contacts</h2>
+
+                <div class="search-box">
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        placeholder="Search by name or email..."
+                        autocomplete="off"
+                    >
+                    <button class="btn-clear" id="clearSearchBtn">Clear</button>
+                </div>
+
+                <div class="table-wrapper">
+                    <div id="contactsList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Application State
+        const app = {
+            contacts: [],
+            nextId: 1,
+            currentEditId: null,
+            currentSearch: '',
+
+            // Initialize the application
+            init() {
+                this.setupEventListeners();
+                this.render();
+            },
+
+            // Setup all event listeners
+            setupEventListeners() {
+                const form = document.getElementById('contactForm');
+                const searchInput = document.getElementById('searchInput');
+                const clearSearchBtn = document.getElementById('clearSearchBtn');
+                const cancelBtn = document.getElementById('cancelBtn');
+
+                form.addEventListener('submit', (e) => this.handleFormSubmit(e));
+                searchInput.addEventListener('keyup', (e) => this.handleSearch(e));
+                clearSearchBtn.addEventListener('click', () => this.clearSearch());
+                cancelBtn.addEventListener('click', () => this.cancelEdit());
+            },
+
+            // Handle form submission
+            handleFormSubmit(e) {
+                e.preventDefault();
+
+                const formData = this.getFormData();
+                const errors = this.validateForm(formData);
+
+                if (Object.keys(errors).length > 0) {
+                    this.displayErrors(errors);
+                    return;
+                }
+
+                this.clearErrors();
+
+                if (this.currentEditId) {
+                    this.updateContact(this.currentEditId, formData);
+                    this.showMessage('Contact updated successfully', 'success');
+                    this.currentEditId = null;
+                } else {
+                    this.addContact(formData);
+                    this.showMessage('Contact added successfully', 'success');
+                }
+
+                this.clearForm();
+                this.resetFormMode();
+                this.render();
+            },
+
+            // Get form data
+            getFormData() {
+                return {
+                    firstName: document.getElementById('firstName').value.trim(),
+                    lastName: document.getElementById('lastName').value.trim(),
+                    email: document.getElementById('email').value.trim(),
+                    phone: document.getElementById('phone').value.trim(),
+                    street: document.getElementById('street').value.trim(),
+                    // city: document.getElementById('city').value.trim(),
+                    state: document.getElementById('state').value.trim(),
+                    postalCode: document.getElementById('postalCode').value.trim()
+                };
+            },
+
+            // Validate form data
+            validateForm(data) {
+                const errors = {};
+
+                if (!data.firstName || !data.firstName.replace(/\s/g, '')) {
+                    errors.firstName = 'First Name is required';
+                } else if (data.firstName.length > 50) {
+                    errors.firstName = 'First Name must be 50 characters or less';
+                }
+
+                if (!data.lastName || !data.lastName.replace(/\s/g, '')) {
+                    errors.lastName = 'Last Name is required';
+                } else if (data.lastName.length > 50) {
+                    errors.lastName = 'Last Name must be 50 characters or less';
+                }
+
+                if (!data.email || !data.email.replace(/\s/g, '')) {
+                    errors.email = 'Email is required';
+                } else if (!document.getElementById('email').validity.valid) {
+                    errors.email = 'Please enter a valid email address';
+                }
+
+                if (data.street && data.street.length > 100) {
+                    errors.street = 'Street Address must be 100 characters or less';
+                }
+
+                // if (data.city && data.city.length > 50) {
+                //     errors.city = 'City must be 50 characters or less';
+                // }
+
+                if (data.state && data.state.length > 50) {
+                    errors.state = 'State/Province must be 50 characters or less';
+                }
+
+                if (data.postalCode && data.postalCode.length > 20) {
+                    errors.postalCode = 'Postal Code must be 20 characters or less';
+                }
+
+                return errors;
+            },
+
+            // Display validation errors
+            displayErrors(errors) {
+                Object.entries(errors).forEach(([field, message]) => {
+                    const input = document.getElementById(field);
+                    const errorDiv = document.querySelector(`.error-message[data-field="${field}"]`);
+                    
+                    if (input) {
+                        input.classList.add('error');
+                    }
+                    if (errorDiv) {
+                        errorDiv.textContent = message;
+                        errorDiv.classList.add('show');
+                    }
+                });
+            },
+
+            // Clear all errors
+            clearErrors() {
+                document.querySelectorAll('input.error').forEach(input => {
+                    input.classList.remove('error');
+                });
+                document.querySelectorAll('.error-message.show').forEach(div => {
+                    div.classList.remove('show');
+                    div.textContent = '';
+                });
+            },
+
+            // Add new contact
+            addContact(data) {
+                const contact = {
+                    id: this.nextId++,
+                    ...data
+                };
+                this.contacts.push(contact);
+            },
+
+            // Update existing contact
+            updateContact(id, data) {
+                const index = this.contacts.findIndex(c => c.id === id);
+                if (index !== -1) {
+                    this.contacts[index] = { ...this.contacts[index], ...data };
+                }
+            },
+
+            // Delete contact
+            deleteContact(id) {
+                const contact = this.contacts.find(c => c.id === id);
+                if (contact) {
+                    if (confirm(`Are you sure you want to delete ${contact.firstName} ${contact.lastName}?`)) {
+                        this.contacts = this.contacts.filter(c => c.id !== id);
+                        this.showMessage('Contact deleted successfully', 'success');
+                        this.render();
+                    }
+                }
+            },
+
+            // Edit contact
+            editContact(id) {
+                const contact = this.contacts.find(c => c.id === id);
+                if (contact) {
+                    this.currentEditId = id;
+                    this.setFormData(contact);
+                    this.setFormMode('edit', contact);
+                    document.getElementById('firstName').focus();
+                }
+            },
+
+            // Set form data
+            setFormData(contact) {
+                document.getElementById('firstName').value = contact.firstName;
+                document.getElementById('lastName').value = contact.lastName;
+                document.getElementById('email').value = contact.email;
+                document.getElementById('phone').value = contact.phone;
+                document.getElementById('street').value = contact.street;
+                // document.getElementById('city').value = contact.city;
+                document.getElementById('state').value = contact.state;
+                document.getElementById('postalCode').value = contact.postalCode;
+            },
+
+            // Clear form fields
+            clearForm() {
+                document.getElementById('contactForm').reset();
+            },
+
+            // Set form mode
+            setFormMode(mode, contact = null) {
+                const heading = document.getElementById('formHeading');
+                const submitBtn = document.getElementById('submitBtn');
+                const cancelBtn = document.getElementById('cancelBtn');
+
+                if (mode === 'edit') {
+                    heading.textContent = `Edit Address: ${contact.firstName} ${contact.lastName}`;
+                    submitBtn.textContent = 'Save Changes';
+                    cancelBtn.classList.add('show');
+                } else {
+                    heading.textContent = 'Add New Address';
+                    submitBtn.textContent = 'Add Address';
+                    cancelBtn.classList.remove('show');
+                }
+            },
+
+            // Reset form mode
+            resetFormMode() {
+                this.setFormMode('add');
+            },
+
+            // Cancel edit
+            cancelEdit() {
+                this.clearForm();
+                this.clearErrors();
+                this.currentEditId = null;
+                this.resetFormMode();
+            },
+
+            // Handle search
+            handleSearch(e) {
+                this.currentSearch = e.target.value.toLowerCase();
+                this.render();
+            },
+
+            // Clear search
+            clearSearch() {
+                document.getElementById('searchInput').value = '';
+                this.currentSearch = '';
+                this.render();
+            },
+
+            // Filter contacts based on search
+            getFilteredContacts() {
+                if (!this.currentSearch) {
+                    return this.contacts;
+                }
+
+                return this.contacts.filter(contact => {
+                    const searchTerm = this.currentSearch;
+                    return (
+                        contact.firstName.toLowerCase().includes(searchTerm) ||
+                        contact.lastName.toLowerCase().includes(searchTerm) ||
+                        contact.email.toLowerCase().includes(searchTerm) ||
+                        contact.phone.toLowerCase().includes(searchTerm)
+                    );
+                });
+            },
+
+            // Render the contact list
+            render() {
+                const contactsList = document.getElementById('contactsList');
+                const filtered = this.getFilteredContacts();
+
+                if (this.contacts.length === 0) {
+                    contactsList.innerHTML = `
+                        <div class="empty-state">
+                            <p>No addresses in your book. Add one to get started.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                if (filtered.length === 0) {
+                    contactsList.innerHTML = `
+                        <div class="no-results">
+                            <p>No matches found. Try a different search term.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>First Name</th>
+                                <th>Last Name</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                filtered.forEach(contact => {
+                    html += `
+                        <tr>
+                            <td>${this.escapeHtml(contact.firstName)}</td>
+                            <td>${this.escapeHtml(contact.lastName)}</td>
+                            <td>${this.escapeHtml(contact.email)}</td>
+                            <td>${this.escapeHtml(contact.phone)}</td>
+                            <td>
+                                <div class="actions">
+                                    <button class="btn-edit" onclick="app.editContact(${contact.id})">Edit</button>
+                                    <button class="btn-delete" onclick="app.deleteContact(${contact.id})">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                        </tbody>
+                    </table>
+                `;
+
+                contactsList.innerHTML = html;
+            },
+
+            // Escape HTML to prevent XSS
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            },
+
+            // Show message
+            showMessage(text, type) {
+                const messageDiv = document.getElementById('message');
+                messageDiv.textContent = text;
+                messageDiv.className = `message show ${type}`;
+
+                setTimeout(() => {
+                    messageDiv.classList.remove('show');
+                }, 4000);
+            }
+        };
+
+        // Initialize the app when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            app.init();
+        });
+    </script>
+</body>
+</html>
